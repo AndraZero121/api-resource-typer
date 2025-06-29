@@ -5,11 +5,9 @@ Ini adalah contoh lengkap bagaimana menggunakan package ApiResourceTyper dalam p
 ## 1. Installation di Project Laravel
 
 ```bash
-# Install package
 composer require andrazero121/api-resource-typer
-
-# Publish config
-php artisan vendor:publish --provider="Andrazero121\ApiResourceTyper\Providers\ApiResourceTyperServiceProvider" --tag="config"
+php artisan vendor:publish --provider="AndraZero121\ApiResourceTyper\Providers\ApiResourceTyperServiceProvider" --tag=api-resource-typer-config
+php artisan vendor:publish --provider="AndraZero121\ApiResourceTyper\Providers\ApiResourceTyperServiceProvider" --tag=api-resource-typer-extension
 ```
 
 ## 2. Setup Model dan Resource
@@ -313,3 +311,30 @@ Sekarang response di Postman akan auto-complete karena TypeScript types sudah te
 ```
 
 Frontend developer tinggal import types dan langsung tau struktur response-nya! 🎉
+
+## 3. Generate Types (TypeScript/JavaScript)
+
+```bash
+# TypeScript (default)
+php artisan generate:api-types
+# JavaScript JSDoc
+php artisan generate:api-types --output-type=js
+```
+
+## 4. Middleware Otomatis
+
+Tambahkan ke route group:
+
+```php
+Route::middleware(['api', 'api-typer'])->group(function () {
+    // route API-mu
+});
+```
+
+## 5. Custom Helper/Extension
+
+Setelah publish extension, edit `app/ApiResourceTyperExtension.php` untuk menambah function custom.
+
+## 6. Output
+
+Akan dihasilkan file .ts atau JSDoc sesuai pilihan CLI, dengan mapping tipe yang spesifik (bukan any kecuali terpaksa).

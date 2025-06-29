@@ -13,7 +13,7 @@ class GenerateTypesCommand extends Command
     /**
      * The name and signature of the console command.
      */
-    protected $signature = 'generate:api-types {--model=} {--controller=}';
+    protected $signature = 'generate:api-types {--model=} {--controller=} {--output-type=ts}';
 
     /**
      * The console command description.
@@ -25,6 +25,7 @@ class GenerateTypesCommand extends Command
      */
     public function handle()
     {
+        $outputType = $this->option('output-type') ?? 'ts';
         $this->info('🚀 Starting API Resource Types generation...');
 
         // Create output directory if it doesn't exist
@@ -36,9 +37,9 @@ class GenerateTypesCommand extends Command
 
         // Get specific model or all models
         if ($this->option('model')) {
-            $this->generateForModel($this->option('model'));
+            $this->generateForModel($this->option('model'), $outputType);
         } else {
-            $this->generateForAllModels();
+            $this->generateForAllModels($outputType);
         }
 
         $this->info('✅ Type generation completed!');
@@ -47,125 +48,122 @@ class GenerateTypesCommand extends Command
     /**
      * Generate types for all models
      */
-    protected function generateForAllModels()
+    protected function generateForAllModels($outputType = 'ts')
     {
         $modelsPath = config('api-resource-typer.models_path');
-        
         if (!File::exists($modelsPath)) {
             $this->error("Models directory not found: {$modelsPath}");
             return;
         }
-
         $modelFiles = File::glob($modelsPath . '/*.php');
-        
         foreach ($modelFiles as $modelFile) {
             $modelName = basename($modelFile, '.php');
-            $this->generateForModel($modelName);
+            $this->generateForModel($modelName, $outputType);
         }
     }
 
     /**
      * Generate types for specific model
      */
-    protected function generateForModel(string $modelName)
+    protected function generateForModel(string $modelName, $outputType = 'ts')
     {
         $this->info("🔄 Processing model: {$modelName}");
-
         try {
             $modelClass = "App\\Models\\{$modelName}";
-            
             if (!class_exists($modelClass)) {
                 $this->warn("Model class not found: {$modelClass}");
                 return;
             }
-
             $model = new $modelClass();
             $tableName = $model->getTable();
-            
-            // Get table columns
             $columns = Schema::getColumnListing($tableName);
             $columnTypes = [];
-
             foreach ($columns as $column) {
                 $columnType = Schema::getColumnType($tableName, $column);
-                $columnTypes[$column] = $this->mapToTypeScriptType($columnType);
+                $columnTypes[$column] = $this->mapToOutputType($columnType, $outputType);
             }
-
-            // Generate TypeScript interface
-            $this->generateTypeScriptInterface($modelName, $columnTypes);
-
+            $this->generateInterfaceFile($modelName, $columnTypes, $outputType);
         } catch (\Exception $e) {
             $this->error("Error processing {$modelName}: " . $e->getMessage());
         }
     }
 
     /**
-     * Map PHP/Database types to TypeScript types
+     * Map PHP/Database types to TypeScript or JavaScript types
      */
-    protected function mapToTypeScriptType(string $type): string
+    protected function mapToOutputType(string $type, string $outputType = 'ts'): string
     {
-        $mappings = config('api-resource-typer.type_mappings');
-        return $mappings[$type] ?? 'any';
+        $tsMappings = config('api-resource-typer.type_mappings');
+        $jsMappings = [
+            'string' => 'string',
+            'integer' => 'number',
+            'int' => 'number',
+            'float' => 'number',
+            'double' => 'number',
+            'boolean' => 'boolean',
+            'bool' => 'boolean',
+            'array' => 'Array',
+            'object' => 'object',
+            'datetime' => 'Date',
+            'timestamp' => 'Date',
+            'date' => 'Date',
+            'time' => 'string',
+            'json' => 'object',
+            'text' => 'string',
+            'longtext' => 'string',
+            'mediumtext' => 'string',
+        ];
+        if ($outputType === 'js') {
+            return $jsMappings[$type] ?? 'any';
+        }
+        return $tsMappings[$type] ?? 'any';
     }
 
     /**
-     * Generate TypeScript interface file
+     * Generate interface file for TypeScript or JavaScript
      */
-    protected function generateTypeScriptInterface(string $modelName, array $columnTypes)
+    protected function generateInterfaceFile(string $modelName, array $columnTypes, string $outputType = 'ts')
     {
         $excludeColumns = config('api-resource-typer.exclude_columns', []);
         $outputPath = config('api-resource-typer.output_path');
-        
-        // Filter out excluded columns
         $filteredColumns = array_filter($columnTypes, function($key) use ($excludeColumns) {
             return !in_array($key, $excludeColumns);
         }, ARRAY_FILTER_USE_KEY);
-
         $interfaceName = $modelName . 'Resource';
-        $fileName = $outputPath . '/' . $interfaceName . '.ts';
-
-        $content = $this->buildInterfaceContent($interfaceName, $filteredColumns);
-        
+        $fileName = $outputPath . '/' . $interfaceName . '.' . $outputType;
+        $content = $this->buildInterfaceContent($interfaceName, $filteredColumns, $outputType);
         File::put($fileName, $content);
         $this->info("📝 Generated: {$fileName}");
     }
 
     /**
-     * Build TypeScript interface content
+     * Build interface content for TypeScript or JavaScript
      */
-    protected function buildInterfaceContent(string $interfaceName, array $columnTypes): string
+    protected function buildInterfaceContent(string $interfaceName, array $columnTypes, string $outputType = 'ts'): string
     {
-        $content = "// Auto-generated TypeScript interface\n";
+        $content = "// Auto-generated " . strtoupper($outputType) . " interface\n";
         $content .= "// Generated at: " . now()->toDateTimeString() . "\n\n";
-        $content .= "export interface {$interfaceName} {\n";
-
-        foreach ($columnTypes as $column => $type) {
-            $content .= "  {$column}: {$type};\n";
+        if ($outputType === 'ts') {
+            $content .= "export interface {$interfaceName} {\n";
+            foreach ($columnTypes as $column => $type) {
+                $content .= "  {$column}: {$type};\n";
+            }
+            $content .= "}\n\n";
+            $content .= "export interface {$interfaceName}Collection {\n";
+            $content .= "  data: {$interfaceName}[];\n";
+            $content .= "  links?: {\n    first: string;\n    last: string;\n    prev: string | null;\n    next: string | null;\n  };\n";
+            $content .= "  meta?: {\n    current_page: number;\n    last_page: number;\n    per_page: number;\n    total: number;\n  };\n";
+            $content .= "}\n\n";
+            $content .= "export interface {$interfaceName}Response {\n  data: {$interfaceName};\n}\n";
+        } else {
+            $content .= "/**\n * @typedef {Object} {$interfaceName}\n";
+            foreach ($columnTypes as $column => $type) {
+                $content .= " * @property {{$type}} {$column}\n";
+            }
+            $content .= " */\n\n";
+            $content .= "/**\n * @typedef {Object} {$interfaceName}Collection\n * @property {{$interfaceName}[]} data\n * @property {{first: string, last: string, prev: string|null, next: string|null}} [links]\n * @property {{current_page: number, last_page: number, per_page: number, total: number}} [meta]\n */\n\n";
+            $content .= "/**\n * @typedef {Object} {$interfaceName}Response\n * @property {{$interfaceName}} data\n */\n";
         }
-
-        $content .= "}\n\n";
-        
-        // Add API response types
-        $content .= "export interface {$interfaceName}Collection {\n";
-        $content .= "  data: {$interfaceName}[];\n";
-        $content .= "  links?: {\n";
-        $content .= "    first: string;\n";
-        $content .= "    last: string;\n";
-        $content .= "    prev: string | null;\n";
-        $content .= "    next: string | null;\n";
-        $content .= "  };\n";
-        $content .= "  meta?: {\n";
-        $content .= "    current_page: number;\n";
-        $content .= "    last_page: number;\n";
-        $content .= "    per_page: number;\n";
-        $content .= "    total: number;\n";
-        $content .= "  };\n";
-        $content .= "}\n\n";
-
-        $content .= "export interface {$interfaceName}Response {\n";
-        $content .= "  data: {$interfaceName};\n";
-        $content .= "}\n";
-
         return $content;
     }
 }

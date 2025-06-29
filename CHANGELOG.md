@@ -2,6 +2,19 @@
 
 All notable changes to `api-resource-typer` will be documented in this file.
 
+## [1.1.0] - 2025-06-29
+
+### Added
+
+- CLI option `--output-type=js|ts` for generating either TypeScript or JavaScript JSDoc types
+- Middleware `api-typer` now auto-registered and always available after running CLI
+- Extension file publishing for user custom helpers
+- Type mapping improved: no `any` unless unavoidable
+
+### Changed
+
+- Documentation and usage examples updated for new features
+
 ## [1.0.0] - 2025-06-29
 
 ### Added

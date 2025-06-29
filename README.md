@@ -1,13 +1,13 @@
 # API Resource Typer
 
-🚀 Automatically generate TypeScript interfaces from your Laravel API Resource Controllers!
+🚀 Automatically generate TypeScript or JavaScript interfaces from your Laravel API Resource Controllers!
 
 ## Features
 
-- ✅ Auto-generate TypeScript interfaces from API responses
+- ✅ Auto-generate TypeScript or JavaScript interfaces from API responses
 - ✅ Support for Laravel Resource and ResourceCollection
-- ✅ Smart type inference from actual data
-- ✅ Artisan command for manual generation
+- ✅ Smart type inference from actual data (no `any` unless unavoidable)
+- ✅ Artisan command for manual generation with output type selection
 - ✅ Middleware for automatic generation
 - ✅ Trait for easy controller integration
 - ✅ Configurable type mappings
@@ -22,7 +22,8 @@ composer require andrazero121/api-resource-typer
 Publish the config file:
 
 ```bash
-php artisan vendor:publish --provider="Andrazero121\ApiResourceTyper\Providers\ApiResourceTyperServiceProvider" --tag="config"
+php artisan vendor:publish --provider="AndraZero121\ApiResourceTyper\Providers\ApiResourceTyperServiceProvider" --tag=api-resource-typer-config
+php artisan vendor:publish --provider="AndraZero121\ApiResourceTyper\Providers\ApiResourceTyperServiceProvider" --tag=api-resource-typer-extension
 ```
 
 ## Usage
@@ -39,7 +40,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use Andrazero121\ApiResourceTyper\Traits\ApiResourceTyper;
+use AndraZero121\ApiResourceTyper\Traits\ApiResourceTyper;
 
 class UserController extends Controller
 {
@@ -74,22 +75,23 @@ Route::middleware(['api', 'api-typer'])->group(function () {
 Generate types manually using Artisan command:
 
 ```bash
-# Generate for all models
+# Generate for all models as TypeScript (default)
 php artisan generate:api-types
 
+# Generate for all models as JavaScript JSDoc
+printf artisan generate:api-types --output-type=js
+
 # Generate for specific model
-php artisan generate:api-types --model=User
+php artisan generate:api-types --model=User --output-type=ts
 ```
 
 ## Generated Output
 
-The package will generate TypeScript interfaces like this:
+The package will generate TypeScript or JSDoc interfaces like this:
 
 ```typescript
-// Auto-generated TypeScript interface
-// Generated at: 2025-06-29 10:30:00
-
-export interface UserType {
+// TypeScript
+export interface UserResource {
   id: number;
   name: string;
   email: string;
@@ -97,93 +99,27 @@ export interface UserType {
   updated_at: Date;
 }
 
-export interface UserTypeResponse {
-  data: UserType;
-}
-
-export interface UserTypeCollection {
-  data: UserType[];
-  links?: {
-    first: string;
-    last: string;
-    prev: string | null;
-    next: string | null;
-  };
-  meta?: {
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-  };
-}
+// JavaScript JSDoc
+/**
+ * @typedef {Object} UserResource
+ * @property {number} id
+ * @property {string} name
+ * ...
+ */
 ```
 
 ## Configuration
 
-Edit `config/api-resource-typer.php`:
+Edit `config/api-resource-typer.php` for output path, type mappings, and excluded columns.
 
-```php
-return [
-    // Output directory for TypeScript files
-    'output_path' => resource_path('js/types'),
+## Custom Extension
 
-    // Auto-generate on API responses (debug mode only)
-    'auto_generate' => env('API_RESOURCE_TYPER_AUTO_GENERATE', true),
-
-    // Type mappings
-    'type_mappings' => [
-        'string' => 'string',
-        'integer' => 'number',
-        'boolean' => 'boolean',
-        'datetime' => 'Date',
-        // ... more mappings
-    ],
-
-    // Columns to exclude
-    'exclude_columns' => [
-        'password',
-        'remember_token',
-    ],
-];
-```
-
-## Environment Variables
-
-Add to your `.env`:
-
-```env
-# Enable/disable auto-generation
-API_RESOURCE_TYPER_AUTO_GENERATE=true
-```
-
-## Frontend Usage
-
-Import and use the generated types in your frontend:
-
-```typescript
-// React/Vue/Angular example
-import { UserType, UserTypeCollection } from "@/types/UserType";
-
-const fetchUsers = async (): Promise<UserTypeCollection> => {
-  const response = await fetch("/api/users");
-  return response.json();
-};
-
-const fetchUser = async (id: number): Promise<UserType> => {
-  const response = await fetch(`/api/users/${id}`);
-  const data = await response.json();
-  return data.data; // Laravel Resource wraps data
-};
-```
+You can add your own helper or type modifier in `app/ApiResourceTyperExtension.php` after publishing the extension file.
 
 ## Requirements
 
 - PHP 8.0+
 - Laravel 8.0+
-
-## Contributing
-
-Pull requests are welcome! For major changes, please open an issue first.
 
 ## License
 

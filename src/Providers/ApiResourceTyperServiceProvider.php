@@ -46,5 +46,12 @@ class ApiResourceTyperServiceProvider extends ServiceProvider
 
         // Register middleware
         $this->app['router']->aliasMiddleware('api-typer', ApiResourceTyperMiddleware::class);
+        // Force reload route middleware if running in console (for CLI discoverability)
+        if ($this->app->runningInConsole()) {
+            $this->app['router']->middlewareGroup('api', array_merge(
+                ['api-typer'],
+                $this->app['router']->getMiddlewareGroups()['api'] ?? []
+            ));
+        }
     }
 }
