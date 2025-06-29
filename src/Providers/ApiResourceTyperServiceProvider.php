@@ -3,8 +3,8 @@
 namespace AndraZero121\ApiResourceTyper\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Andrazero121\ApiResourceTyper\Commands\GenerateTypesCommand;
-use Andrazero121\ApiResourceTyper\Middleware\ApiResourceTyperMiddleware;
+use AndraZero121\ApiResourceTyper\Commands\GenerateTypesCommand;
+use AndraZero121\ApiResourceTyper\Middleware\ApiResourceTyperMiddleware;
 
 class ApiResourceTyperServiceProvider extends ServiceProvider
 {
