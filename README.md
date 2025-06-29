@@ -28,7 +28,7 @@ php artisan vendor:publish --provider="AndraZero121\ApiResourceTyper\Providers\A
 
 ## Usage
 
-### Method 1: Using Trait (Recommended)
+### Method 1: Using Trait
 
 Add the trait to your API controllers:
 
@@ -70,7 +70,7 @@ Route::middleware(['api', 'api-typer'])->group(function () {
 });
 ```
 
-### Method 3: Manual Generation
+### Method 3: Manual Generation (Recommended)
 
 Generate types manually using Artisan command:
 
