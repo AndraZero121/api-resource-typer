@@ -4,6 +4,7 @@ namespace AndraZero121\ApiResourceTyper\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Facades\Schema;
 use ReflectionClass;
@@ -80,7 +81,7 @@ class GenerateTypesCommand extends Command
             $columnTypes = [];
             foreach ($columns as $column) {
                 $columnType = Schema::getColumnType($tableName, $column);
-                $columnTypes[$column] = $this->mapToOutputType($columnType, $outputType);
+                $columnTypes[$column] = $this->mapToOutputType($columnType, $outputType, $tableName, $column);
             }
             $this->generateInterfaceFile($modelName, $columnTypes, $outputType);
         } catch (\Exception $e) {
@@ -91,7 +92,7 @@ class GenerateTypesCommand extends Command
     /**
      * Map PHP/Database types to TypeScript or JavaScript types
      */
-    protected function mapToOutputType(string $type, string $outputType = 'ts'): string
+    protected function mapToOutputType(string $type, string $outputType = 'ts', $table = null, $column = null): string
     {
         $tsMappings = config('api-resource-typer.type_mappings');
         $jsMappings = [
@@ -100,6 +101,7 @@ class GenerateTypesCommand extends Command
             'int' => 'number',
             'float' => 'number',
             'double' => 'number',
+            'decimal' => 'number',
             'boolean' => 'boolean',
             'bool' => 'boolean',
             'array' => 'Array',
@@ -112,7 +114,25 @@ class GenerateTypesCommand extends Command
             'text' => 'string',
             'longtext' => 'string',
             'mediumtext' => 'string',
+            'enum' => 'string',
         ];
+        // Cek detail kolom dari DBAL jika table & column diberikan
+        if ($table && $column && Schema::hasColumn($table, $column)) {
+            try {
+                $col = DB::getDoctrineColumn($table, $column);
+                if ($col->getType()->getName() === 'decimal') {
+                    return 'number';
+                }
+                if ($col->getType()->getName() === 'enum') {
+                    return 'string';
+                }
+                if ($col->getNotnull() === false) {
+                    // nullable, tambahkan |null di ts, atau null di js
+                    $baseType = $outputType === 'js' ? ($jsMappings[$type] ?? 'any') : ($tsMappings[$type] ?? 'any');
+                    return $outputType === 'js' ? $baseType : ($baseType . ' | null');
+                }
+            } catch (\Throwable $e) {}
+        }
         if ($outputType === 'js') {
             return $jsMappings[$type] ?? 'any';
         }
