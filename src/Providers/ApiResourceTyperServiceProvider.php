@@ -21,10 +21,21 @@ class ApiResourceTyperServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Load user extension if exists
+        define('API_RESOURCE_TYPER_EXTENSION', app_path('ApiResourceTyperExtension.php'));
+        if (file_exists(API_RESOURCE_TYPER_EXTENSION)) {
+            require_once API_RESOURCE_TYPER_EXTENSION;
+        }
+
         // Publish config
         $this->publishes([
             __DIR__ . '/../../config/api-resource-typer.php' => config_path('api-resource-typer.php'),
-        ], 'config');
+        ], 'api-resource-typer-config');
+
+        // Publish extension file
+        $this->publishes([
+            __DIR__ . '/../../extensions/ApiResourceTyperExtension.php' => app_path('ApiResourceTyperExtension.php'),
+        ], 'api-resource-typer-extension');
 
         // Register commands
         if ($this->app->runningInConsole()) {
