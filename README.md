@@ -6,7 +6,7 @@
 
 - ✅ Auto-generate TypeScript or JavaScript interfaces from API responses
 - ✅ Support for Laravel Resource and ResourceCollection
-- ✅ Smart type inference from actual data (no `any` unless unavoidable)
+- ✅ Smart type inference from actual data
 - ✅ Artisan command for manual generation with output type selection
 - ✅ Middleware for automatic generation
 - ✅ Trait for easy controller integration
@@ -118,8 +118,8 @@ You can add your own helper or type modifier in `app/ApiResourceTyperExtension.p
 
 ## Requirements
 
-- PHP 8.0+
-- Laravel 8.0+
+- PHP 8.2+
+- Laravel 11.x+
 
 ## License
 
